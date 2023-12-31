@@ -31,6 +31,7 @@
 #include <linux/hrtimer.h>
 #include <linux/notifier.h>
 #include <linux/fb.h>
+#include <linux/sched/core_ctl.h>
 
 #define ASMP_TAG "AutoSMP: "
 
@@ -406,9 +407,6 @@ static void __ref asmp_stop(void)
 	pr_info(ASMP_TAG"disabled\n");
 }
 
-#ifdef CONFIG_AIO_HOTPLUG
-extern int AiO_HotPlug;
-#endif
 static int set_enabled(const char *val,
 			     const struct kernel_param *kp)
 {
@@ -416,22 +414,11 @@ static int set_enabled(const char *val,
 
 	ret = param_set_bool(val, kp);
 	if (asmp_enabled) {
-#ifdef CONFIG_AIO_HOTPLUG
-		if (AiO_HotPlug) {
-			asmp_enabled = 0;
-			pr_info(ASMP_TAG"You can't enable more than 1 hotplug!\n");
-			return ret;
-		}
-#endif
 #ifdef CONFIG_SCHED_CORE_CTL
 		disable_core_control(true);
 #endif
 		asmp_start();
 	} else {
-#ifdef CONFIG_AIO_HOTPLUG
-		if (AiO_HotPlug)
-			return ret;
-#endif
 		asmp_stop();
 #ifdef CONFIG_SCHED_CORE_CTL
 		disable_core_control(false);
@@ -449,6 +436,13 @@ module_param_cb(enabled, &module_ops, &asmp_enabled, 0644);
 MODULE_PARM_DESC(enabled, "hotplug/unplug cpu cores based on cpu load");
 
 /***************************** SYSFS START *****************************/
+
+struct global_attr {
+    struct attribute attr;
+    ssize_t (*show)(struct kobject *, struct attribute *, char *);
+    ssize_t (*store)(struct kobject *, struct attribute *, const char *, size_t);
+};
+
 #define define_one_global_ro(_name)					\
 static struct global_attr _name =					\
 __ATTR(_name, 0444, show_##_name, NULL)

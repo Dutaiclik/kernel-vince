@@ -64,12 +64,12 @@ static struct asmp_param_struct {
 	unsigned int cycle_up;
 	unsigned int cycle_down;
 } asmp_param = {
-	.delay = 100,
+	.delay = 10, // looks like 100 ms good for old device, change it to 10 ms
 	.scroff_single_core = true,
 	.max_cpus_bc = 4, /* Max cpu Big cluster ! */
 	.max_cpus_lc = 4, /* Max cpu Little cluster ! */
-	.min_cpus_bc = 2, /* Minimum Big cluster online */
-	.min_cpus_lc = 2, /* Minimum Little cluster online */
+	.min_cpus_bc = 1, /* Minimum Big cluster online */
+	.min_cpus_lc = 1, /* Minimum Little cluster online */
 	.cpufreq_up_bc = 80,
 	.cpufreq_up_lc = 70,
 	.cpufreq_down_bc = 25,
@@ -266,6 +266,8 @@ static void __ref asmp_work_fn(struct work_struct *work) {
 	 * Reflect to any users configure about min cpus.
 	 * give a delay for atleast 2 seconds to prevent
 	 * wrong cpu loads calculation.
+	 * MODIFY
+	 * Looks like 2 seconds is very heavy, change it to 10 ms
 	 */
 	if (nr_cpu_online_lc < min_cpu_lc || nr_cpu_online_bc < min_cpu_bc) {
 		for_each_possible_cpu(cpu) {
@@ -275,7 +277,7 @@ static void __ref asmp_work_fn(struct work_struct *work) {
 
 			update_prev_idle(cpu);
 		}
-		delay_jif = msecs_to_jiffies(2000);
+		delay_jif = msecs_to_jiffies(10);
 	}
 
 	queue_delayed_work(asmp_workq, &asmp_work, delay_jif);
@@ -307,9 +309,12 @@ static void __ref asmp_resume(void)
 		update_prev_idle(cpu);
 	}
 
-	/* rescheduled queue atleast on 3 seconds */
+	/* rescheduled queue atleast on 3 seconds 
+	* MODIFY
+	* Same like before, change it to 10 ms
+	*/
 	queue_delayed_work(asmp_workq, &asmp_work,
-				msecs_to_jiffies(3000));
+				msecs_to_jiffies(10));
 }
 
 static int asmp_notifier_cb(struct notifier_block *nb,
